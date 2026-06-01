@@ -68,36 +68,6 @@
         </field>
     </record>
 
-    <record id="hr_appraisal_goal_template_view_hierarchy" model="ir.ui.view">
-        <field name="name">hr.appraisal.goal.template.view.hierarchy</field>
-        <field name="model">hr.appraisal.goal</field>
-        <field name="priority">40</field>
-        <field name="arch" type="xml">
-            <hierarchy child_field="child_ids" draggable="1" class="o_goal_hierarchy_view">
-                <field name="name"/>
-                <field name="deadline"/>
-                <field name="tag_ids"/>
-                <templates>
-                    <t t-name="hierarchy-box">
-                        <div class="d-flex flex-column mx-2">
-                            <div class="d-flex flex-row pt-2">
-                                <field name="name" class="h4 pb-0"/>
-                            </div>
-                            <div class="d-grid column-gap-2" style="grid-template-columns: max-content minmax(0,1fr);">
-                                <span>Expected Time:</span>
-                                <span>
-                                    <field name="usual_duration_month" style="width: 4ch;" class="me-1"/>
-                                    <span>months</span>
-                                </span>
-                                <span id="span_tag" invisible="not tag_ids">Tags:</span>
-                                <field name="tag_ids" invisible="not tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
-                            </div>
-                        </div>
-                    </t>
-                </templates>
-            </hierarchy>
-        </field>
-    </record>
 
     <record id="hr_appraisal_goal_template_view_search" model="ir.ui.view">
         <field name="name">hr.appraisal.goal.template.view.search</field>
@@ -116,10 +86,9 @@
         <field name="name">Goals Template</field>
         <field name="res_model">hr.appraisal.goal</field>
         <field name="search_view_id" ref="hr_appraisal_goal_template_view_search"/>
-        <field name="view_mode">list,hierarchy,form</field>
+        <field name="view_mode">list,form</field>
         <field name="view_ids" eval="[(5, 0, 0),
             (0, 0, {'view_mode': 'list', 'view_id': ref('hr_appraisal.hr_appraisal_goal_template_view_list')}),
-            (0, 0, {'view_mode': 'hierarchy', 'view_id': ref('hr_appraisal.hr_appraisal_goal_template_view_hierarchy')}),
             (0, 0, {'view_mode': 'form', 'view_id': ref('hr_appraisal.hr_appraisal_goal_template_view_form')})]"/>
         <field name="domain">[('employee_ids', '=', False)]</field>
         <field name="help" type="html">

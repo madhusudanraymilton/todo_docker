@@ -113,36 +113,6 @@
         </field>
     </record>
 
-    <record id="hr_appraisal_goal_view_hierarchy" model="ir.ui.view">
-        <field name="name">hr.appraisal.goal.view.hierarchy</field>
-        <field name="model">hr.appraisal.goal</field>
-        <field name="priority">35</field>
-        <field name="arch" type="xml">
-            <hierarchy child_field="child_ids" draggable="0" class="o_goal_hierarchy_view">
-                <field name="name"/>
-                <field name="deadline"/>
-                <field name="tag_ids"/>
-                <field name="progression"/>
-                <templates>
-                    <t t-name="hierarchy-box">
-                        <div class="d-flex flex-column mx-2">
-                            <div class="d-flex flex-row pt-2">
-                                <field name="name" class="h4 pb-0 text-wrap flex-grow-1 me-1"/>
-                                <field name="progression" widget="badge" decoration-success="progression == '100'"/>
-                            </div>
-                            <div class="d-grid column-gap-2" style="grid-template-columns: min-content minmax(0,1fr);">
-                                <span>Deadline:</span>
-                                <field name="deadline"/>
-                                <span id="span_tag" invisible="not tag_ids">Tags:</span>
-                                <field name="tag_ids" invisible="not tag_ids"
-                                    widget="many2many_tags" options="{'color_field': 'color'}"/>
-                            </div>
-                        </div>
-                    </t>
-                </templates>
-            </hierarchy>
-        </field>
-    </record>
 
     <record id="hr_appraisal_goal_view_search" model="ir.ui.view">
         <field name="name">hr.appraisal.goal.view.search</field>

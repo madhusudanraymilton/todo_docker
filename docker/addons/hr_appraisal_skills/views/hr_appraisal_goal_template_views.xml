@@ -21,19 +21,8 @@
         </field>
     </record>
 
-    <record id="hr_appraisal_goal_template_view_hierarchy" model="ir.ui.view">
-        <field name="name">hr.appraisal.goal.template.view.hierarchy.inherit.hr_appraisal_skills</field>
-        <field name="model">hr.appraisal.goal</field>
-        <field name="inherit_id" ref="hr_appraisal.hr_appraisal_goal_template_view_hierarchy"/>
-        <field name="arch" type="xml">
-            <span id="span_tag" position="before">
-                <span invisible="not current_goal_skill_ids">Skills:</span>
-                <field name="current_goal_skill_ids" widget="many2many_tags"
-                    invisible="not current_goal_skill_ids" options="{'color_field': 'color'}"/>
-            </span>
-        </field>
-    </record>
-
+   
+   
     <record id="hr_appraisal_goal_template_view_tree" model="ir.ui.view">
         <field name="name">hr.appraisal.goal.template.view.list.inherit.hr_appraisal_skills</field>
         <field name="model">hr.appraisal.goal</field>

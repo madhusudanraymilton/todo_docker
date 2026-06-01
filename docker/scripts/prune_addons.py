@@ -181,7 +181,12 @@ REQUESTED_MODULES: set[str] = {
     "hr_expense",
     "hr_timesheet",
     "hr_skills",
-
+    "hr_work_entry_holidays",
+    "hr_fleet",
+    "hr_work_entry",
+    "fleet",
+    "website",
+    "theme_default",
 }
 
 # Framework helpers pulled in automatically as transitive deps.
@@ -190,6 +195,11 @@ EXTRA_INSTALLABLE_MODULES: set[str] = {
     "hr_calendar",
     "iap",
     "base_vat",
+    "link_tracker",
+    "base_address_extended",
+    "website_hr_recruitment",
+    "l10n_us",
+    "spreadsheet_dashboard",
 }
 
 # These are in REQUESTED_MODULES but absent from Community CE image.
@@ -197,6 +207,7 @@ EXTRA_INSTALLABLE_MODULES: set[str] = {
 OPTIONAL_REQUESTED_MODULES: set[str] = {
     "hr_contract",
     "hr_payroll",
+    "theme_default",
 }
 
 # ── FIX #1 ───────────────────────────────────────────────────────────────────
@@ -211,6 +222,12 @@ VISIBLE_APP_MODULES: set[str] = {
     "hr_expense",
     "hr_timesheet",
     "hr_skills",
+    "hr_work_entry_holidays",
+    "website",
+    "hr_fleet",
+    "hr_work_entry",
+    "fleet",
+    
 }
 # To add more HR sub-apps (e.g. hr_timesheet, hr_org_chart) just append here.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -348,6 +365,69 @@ def patch_base_module(base_dst: Path) -> None:
     )
     print('[prune_addons] ir_module_category_data.xml patched successfully.', file=sys.stderr)
 
+def patch_pruned_module_refs(target_addons: Path, installable: set[str]) -> None:
+    """
+    Scan every *.xml data file under target_addons.  For each <record> block
+    that contains  ref="base.module_XXX"  where XXX is a pruned (non-installable)
+    module, inject  forcecreate="0"  on the opening <record> tag.
+
+    With forcecreate="0":
+      • New record (ID not yet in ir.model.data) → silently skipped.
+      • Existing record → updated; missing refs resolve to False instead of
+        raising ValueError.
+    Both outcomes are safe: the record concerns a module we deliberately removed.
+
+    Typical targets: website.configurator.feature, ir.module.module records,
+    any data file that ships "optional companion" module references.
+    """
+    ref_re = re.compile(r'\bref="base\.module_([A-Za-z0-9_]+)"')
+    patched_files: list[str] = []
+
+    for xml_path in sorted(target_addons.rglob('*.xml')):
+        text = xml_path.read_text(encoding='utf-8')
+        if 'base.module_' not in text:
+            continue
+
+        # Quick pre-filter: any ref in this file points to a pruned module?
+        file_module_refs = set(ref_re.findall(text))
+        if not (file_module_refs - installable):
+            continue
+
+        # Split on </record> — Odoo data files never nest <record> elements,
+        # so each chunk is exactly one record's opening tag + body.
+        chunks = text.split('</record>')
+        changed = False
+        out: list[str] = []
+
+        for chunk in chunks[:-1]:
+            block_refs = set(ref_re.findall(chunk))
+            if block_refs - installable:
+                # Stamp forcecreate="0" on the <record …> opening tag.
+                chunk = re.sub(
+                    r'<record\b[^>]*>',
+                    lambda m: (
+                        m.group().replace('<record', '<record forcecreate="0"', 1)
+                        if 'forcecreate' not in m.group()
+                        else m.group()
+                    ),
+                    chunk,
+                    count=1,
+                )
+                changed = True
+            out.append(chunk)
+        out.append(chunks[-1])
+
+        if changed:
+            xml_path.write_text('</record>'.join(out), encoding='utf-8')
+            patched_files.append(str(xml_path.relative_to(target_addons)))
+
+    if patched_files:
+        print(
+            f'[prune_addons] forcecreate="0" stamped on pruned-module-ref '
+            f'records in {len(patched_files)} file(s):\n  '
+            + '\n  '.join(patched_files),
+            file=sys.stderr,
+        )
 
 # ── Copy + patch ──────────────────────────────────────────────────────────────
 
@@ -428,6 +508,7 @@ def main() -> int:
 
     copy_curated_modules(installable, effective_app_modules)
     patch_base_module(TARGET_ADDONS / 'base')   # ← ADD THIS LINE
+    patch_pruned_module_refs(TARGET_ADDONS, installable)   # ← ADD THIS
     write_policy("/opt/odoo-installable-modules.txt", installable)
     write_policy("/opt/odoo-app-modules.txt", effective_app_modules)
 
