@@ -178,6 +178,10 @@ REQUESTED_MODULES: set[str] = {
     "hr_recruitment",
     "hr_contract",   # Enterprise-only; safe to list here, handled by OPTIONAL below
     "hr_payroll",    # Enterprise-only; same
+    "hr_expense",
+    "hr_timesheet",
+    "hr_skills",
+
 }
 
 # Framework helpers pulled in automatically as transitive deps.
@@ -185,6 +189,7 @@ EXTRA_INSTALLABLE_MODULES: set[str] = {
     "base_import",
     "hr_calendar",
     "iap",
+    "base_vat",
 }
 
 # These are in REQUESTED_MODULES but absent from Community CE image.
@@ -203,6 +208,9 @@ VISIBLE_APP_MODULES: set[str] = {
     "hr_attendance",
     "hr_holidays",
     "hr_recruitment",
+    "hr_expense",
+    "hr_timesheet",
+    "hr_skills",
 }
 # To add more HR sub-apps (e.g. hr_timesheet, hr_org_chart) just append here.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -270,6 +278,75 @@ def patch_manifest_application(module_dst: Path) -> bool:
 
     manifest_path.write_text(patched, encoding="utf-8")
     return True
+
+def patch_base_module(base_dst: Path) -> None:
+    """
+    Fix Odoo 19 nightly-build data inconsistency: ir_module_module.xml can
+    reference category XML IDs (base.module_category_xxx) that don't exist yet
+    in ir_module_category_data.xml, causing a fatal ParseError on first boot.
+
+    Strategy: diff the two files, inject minimal stub <record> entries for every
+    missing ID so all refs resolve cleanly. Stubs are invisible in the UI.
+    This runs at image build time so the fix survives restarts and DB restores.
+    """
+    category_file = base_dst / 'data' / 'ir_module_category_data.xml'
+    module_file   = base_dst / 'data' / 'ir_module_module.xml'
+
+    if not (category_file.exists() and module_file.exists()):
+        return
+
+    cat_text = category_file.read_text(encoding='utf-8')
+    mod_text = module_file.read_text(encoding='utf-8')
+
+    # IDs already defined in the category file (bare, no module prefix)
+    defined_ids: set[str] = set(re.findall(r'<record[^>]+\bid="([^"]+)"', cat_text))
+
+    # Every category ref used in ir_module_module.xml
+    # e.g.  <field name="category_id" ref="base.module_category_services_timesheets"/>
+    needed_ids: set[str] = {
+        ref.split('.', 1)[-1]                          # strip leading "base."
+        for ref in re.findall(
+            r'<field\s+name="category_id"\s+ref="([^"]+)"', mod_text
+        )
+    }
+
+    missing = needed_ids - defined_ids
+    if not missing:
+        return
+
+    print(
+        f'[prune_addons] Injecting {len(missing)} missing category stub(s) '
+        f'into ir_module_category_data.xml: {sorted(missing)}',
+        file=sys.stderr,
+    )
+
+    stubs: list[str] = []
+    for cat_id in sorted(missing):
+        # Derive a display name from the last underscore-segment
+        raw  = cat_id.replace('module_category_', '')
+        name = raw.rsplit('_', 1)[-1].capitalize()   # "timesheets" → "Timesheets"
+
+        # Try to infer a parent from the ID (services_timesheets → services)
+        parts     = raw.split('_')
+        parent_id = 'module_category_' + '_'.join(parts[:-1]) if len(parts) > 1 else ''
+
+        lines = [
+            f'    <record id="{cat_id}" model="ir.module.category">',
+            f'        <field name="name">{name}</field>',
+        ]
+        if parent_id and parent_id in defined_ids:
+            lines.append(f'        <field name="parent_id" ref="{parent_id}"/>')
+        lines += [
+            '        <field name="visible" eval="False"/>',
+            '    </record>',
+        ]
+        stubs.append('\n'.join(lines))
+
+    category_file.write_text(
+        cat_text.replace('</odoo>', '\n' + '\n\n'.join(stubs) + '\n</odoo>'),
+        encoding='utf-8',
+    )
+    print('[prune_addons] ir_module_category_data.xml patched successfully.', file=sys.stderr)
 
 
 # ── Copy + patch ──────────────────────────────────────────────────────────────
@@ -350,6 +427,7 @@ def main() -> int:
         )
 
     copy_curated_modules(installable, effective_app_modules)
+    patch_base_module(TARGET_ADDONS / 'base')   # ← ADD THIS LINE
     write_policy("/opt/odoo-installable-modules.txt", installable)
     write_policy("/opt/odoo-app-modules.txt", effective_app_modules)
 

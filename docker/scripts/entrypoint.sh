@@ -346,7 +346,7 @@ bootstrap_db() {
         "${DB_ARGS[@]}" \
         -d "$ODOO_DB_NAME" \
         -i "$ODOO_BOOTSTRAP_MODULES" \
-        --without-demo=all \
+        --without-demo=True \
         --stop-after-init \
         --no-http
     log "Bootstrap complete."

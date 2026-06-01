@@ -20,7 +20,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
       ODOO_DB_NAME: ${ODOO_DB_NAME:-odoo}
       ODOO_ADMIN_PASSWORD_FILE: /run/secrets/odoo_admin_password
-      ODOO_BOOTSTRAP_MODULES: base,web
+      ODOO_BOOTSTRAP_MODULES: base,web,mail
       DB_WAIT_TIMEOUT: 90
       PYTHONDONTWRITEBYTECODE: "1"
 
