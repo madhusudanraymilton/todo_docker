@@ -1,0 +1,10 @@
+.git
+.agents
+.codex
+build.log
+secrets/*
+addons/*
+!addons/.gitkeep
+**/__pycache__
+**/*.pyc
+**/*.pyo

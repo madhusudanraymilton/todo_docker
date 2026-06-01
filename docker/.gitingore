@@ -1,0 +1,13 @@
+# Never commit the real DB password
+secrets/odoo_password
+
+# Local logs / caches
+*.log
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor junk
+.vscode/
+.idea/
+.DS_Store
