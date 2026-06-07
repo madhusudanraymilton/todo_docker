@@ -200,9 +200,6 @@ EXTRA_INSTALLABLE_MODULES: set[str] = {
     "website_hr_recruitment",
     "l10n_us",
     "spreadsheet_dashboard",
-    "stock",
-    "account",
-    "base_iban",
 }
 
 # These are in REQUESTED_MODULES but absent from Community CE image.
